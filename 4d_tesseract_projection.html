@@ -1,0 +1,935 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="UTF-8">
+<title>Würfel/Cube in 4D</title>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<style>
+  html {
+    font-family: sans-serif;
+    font-size: 16px;
+  }
+  html[lang^="de"] [lang]:not([lang^="de"]),
+  html:not([lang^="de"]) [lang^="de"] {
+    display: none;
+  }
+  .page {
+    width: 75em;
+    max-width: 95%;
+    margin: 0 auto;
+  }
+  h1 {
+    text-align: center;
+  }
+  input[type="color"] {
+    height: 1.5rem;
+  }
+  .grid-row {
+    display: flex;
+    gap: 1.5em;
+    flex-wrap: wrap;
+  }
+  .grid-col {
+    width: calc(50% - 0.75em);
+  }
+  canvas {
+    aspect-ratio: 1;
+    width: 100%;
+  }
+  .description {
+    font-size: 0.75em;
+    line-height: 1.2;
+    margin-bottom: 1em;
+  }
+  .description p {
+    margin: 0.5em 0;
+  }
+  .show-only {
+    display: none;
+  }
+  .cube .show-only.cube,
+  .tesseract .show-only.tesseract,
+  .dodecahedron .show-only.dodecahedron,
+  .cell120 .show-only.cell120,
+  .sphere .show-only.sphere,
+  .hypersphere .show-only.hypersphere {
+    display: block;
+  }
+  .controls > h2 {
+    margin-top: 0;
+  }
+  .controls > div:not(.show-only) {
+    display: flex;
+    gap: 1em;
+    margin-bottom: 0.5em;
+  }
+  .controls > div > label {
+    display: flex;
+    gap: 0.75em;
+    max-width: 100%;
+    min-width: 0;
+  }
+  .controls > div > label > span:first-child,
+  .controls > div > label > span:first-child + span {
+    min-width: 10em;
+  }
+  .controls > div > label > input[type="range"] {
+    width: 20em;
+    flex-shrink: 1;
+    min-width: 0;
+  }
+  .controls > div > label > input[type="range"] + span {
+    width: 2em;
+    text-align: right;
+    flex-shrink: 1;
+  }
+  .controls > div > label > input[type="range"][data-decimals="2"] + span {
+    width: 3em;
+    margin-left: -1em;
+  }
+  .controls > div > label > input[type="range"] + span + span {
+    margin-left: -0.75em;
+    flex-shrink: 1;
+  }
+  .controls > div > label > input[type="range"] + span:empty + span {
+    visibility: hidden;
+  }
+  
+  @media (max-width: 1199px) {
+    html {
+      font-size: 14px;
+    }
+  }
+  @media (max-width: 799px) {
+    html {
+      font-size: 16px;
+    }
+    .grid-col {
+      width: 100%;
+    }
+  }
+</style>
+<script>
+  document.documentElement.setAttribute('lang',navigator.language.match(/^de/i)?'de-DE':'en-GB');
+</script>
+</head>
+<body>
+<div class="page">
+  <h1><span lang="en-GB">Cube in 4D</span><span lang="de-DE">Würfel in 4D</span></h1>
+  
+  <div class="grid-row">
+    <div class="grid-col">
+       <div class="description" lang="en-GB">
+        <p>The <a href="https://en.wikipedia.org/wiki/Axonometric_projection" target="_blank">dimetric projection</a> is used for the 3D representation. Parallel edges remain parallel even in perspective, and proportions are not reduced as depth increases.</p>
+        <p>The fourth spatial dimension is not projected at all; the w-axis remains as a point at the origin. Edges that are displaced into this dimension are actually invisible, but are drawn semi-transparently in the representation – much like when you fix your gaze on a single point and the image to the left and right of it appears blurred.</p>
+        <p>Edges lying behind the yz-plane, i.e. those with a negative x-coordinate, are depicted with increasingly dashed lines. This differs from the usual representation, where hidden edges are dashed regardless of their position. <br/>Similarly, edges with a negative w-coordinate in the fourth spatial dimension are shown as dotted lines. When combined, this results in dashed-dotted lines.</p>
+      </div>
+     <div class="description" lang="de-DE">
+        <p>Als 3D-Darstellung wird die <a href="https://de.wikipedia.org/wiki/Ingenieurperspektive" target="_blank">Ingenieurperspektive</a> verwendet. Parallele Kanten bleiben auch in der Perspektive parallel, Proportionen werden mit zunehmender Tiefe nicht verkleinert.</p>
+        <p>Die 4. Raumdimension wird gar nicht projiziert, die w-Achse bleibt als Punkt im Ursprung. Kanten, die in diese Dimension verschoben sind, bleiben eigentlich unsichtbar, werden aber in der Darstellung halb-transparent gezeichnet – so ähnlich, wenn man sich mit dem Blick auf eine Stelle fixiert und das Bild links und rechts davon verschwommen wahrnimmt.</p>
+        <p>Kanten, die hinter der yz-Ebene liegen, also eine negative x-Koordinate haben, werden zunehmend gestrichelt dargestellt. Dies ist anders als die übliche Darstellung, wo verdeckte Kanten gestrichelt werden, unabhängig von der Lage.<br/>Analog werden Kanten mit negativer w-Koordinate in der 4. Raumdimension gepunktet dargestellt. In der Kombination ergeben sich entsprechend Strichpunktlinien.</p>
+      </div>
+
+      <canvas id="c"></canvas>
+
+      <div class="description" lang="en-GB">
+        <p class="show-only cube">The centre point is initially at the origin, so half of the cube is at the bottom, half on the left and half at the back. This is not immediately apparent due to perspective, as information is inevitably lost during projection. The position can only be discerned from the hatched lines on the edges. <br/>If the cube is moved by 1 in each of the 3D spatial dimensions x, y and z, the three lower, left and rear edges lie on the coordinate axes respectively.</p>
+        <p class="show-only tesseract">A <a href="https://en.wikipedia.org/wiki/Tesseract" target="_blank">tesseract</a> is a 4-dimensional cube consisting of two ‘normal’ 3D cubes connected by edges.</p>
+        <p class="show-only tesseract">Initially, both 3D cubes lie at 1 and -1 in the fourth spatial dimension, so that they are invisible. Only the points where the 8 ‘connecting’ edges pass through are visible. <br/>If the tesseract is moved along the w-axis by 1 or -1, one or the other cube becomes fully visible.</p>
+        <p class="show-only dodecahedron">A <a href="https://en.wikipedia.org/wiki/Regular_dodecahedron" target="_blank">dodecahedron</a> is a regular polyhedron with pentagons as its faces.<br/>If you arrange squares or regular hexagons on a plane, they fit exactly inside one another and fill the entire area. With regular pentagons, however, this is not possible; there is always a 36° gap between neighbouring faces. This gap can be closed by folding the pentagons out of the plane and upwards, so that the solid is closed with 12 faces.</p>
+        <p class="show-only cell120">A <a href="https://en.wikipedia.org/wiki/120-cell" target="_blank">120-cell</a> is a 4-dimensional solid consisting of 120 dodecahedra. <br/>Cubes can be stacked so that they fill the entire space without any gaps. Similarly to pentagons in the plane, which can only be joined by folding them into the 3rd dimension, dodecahedra cannot be stacked without gaps of 10.3°. They must be folded into a further dimension – the fourth dimension – to close the gaps. This 4-dimensional solid is only completely closed with 120 dodecahedra.</p>
+        <p class="show-only sphere">In this projection, a sphere is usually depicted using a grid of lines of longitude and latitude. Instead of lines of longitude, the lines of latitude are drawn here not only in the z-direction but also in the x- and y-directions. In a sense, the three great circles can be seen as the edges of the sphere, although this is not strictly correct mathematically, as all directions are equivalent.</p>
+        <p class="show-only sphere">For both the sphere and the hypersphere, the number of circles can be adjusted.</p>
+        <p class="show-only hypersphere">A sphere can be visualised as many circles stacked on top of one another (small, then large, then small again). A <a href="https://en.wikipedia.org/wiki/3-sphere" target="_blank">hypersphere or 3-sphere</a> is formed in a similar way, as if one were to stack many spheres (from small to large and back to small) on top of one another in the 4th dimension.</p>
+      </div>
+      <div class="description" lang="de-DE">
+        <p class="show-only cube">Der Mittelpunkt liegt anfangs im Ursprung, der Würfel ist also jeweils zur Hälfte unten, links und hinten. Durch die Perspektive ist dies nicht direkt sichtbar, da durch die Projektion prinzipiell Informationen verlorengehen. Erkennbar ist die Lage nur an der Strichelung der Kanten.<br/>Verschiebt man den Würfel in den 3D-Raumdimensionen x, y und z jeweils um 1, liegen die drei unteren/linken/hinteren Kanten jeweils auf den Koordinatenachsen.</p>
+        <p class="show-only tesseract">Ein <a href="https://de.wikipedia.org/wiki/Tesserakt" target="_blank">Tesserakt</a> ist ein 4-dimensionaler Würfel, der aus 2 "normalen" 3D-Würfeln besteht, die durch Kanten miteinander verbunden sind.</p>
+        <p class="show-only tesseract">Anfangs liegen beide 3D-Würfel in der 4. Raumdimension bei 1 und -1, so dass sie unsichtbar sind. Nur die Durchstoßpunkte der 8 "verbindenden" Kanten sind sichtbar.<br/>Verschiebt man den Tesserakt entlang der w-Achse um 1 oder -1, wird der eine oder der andere Würfel komplett sichtbar.</p>
+        <p class="show-only dodecahedron">Ein <a href="https://de.wikipedia.org/wiki/Dodekaeder" target="_blank">Dodekaeder</a> ist ein regelmäßiger Körper mit 5-Ecken als Seitenflächen.<br/>Legt man Quadrate oder regelmäßige Sechsecke in der Ebene aus, passen sie genau ineinander und füllen die gesamte Fläche aus. Mit regelmäßigen 5-Ecken geht das dagegen nicht, es bleibt immer ein Spalt von 36° zwischen den benachbarten Flächen. Diesen Spalt kann man schließen, indem man die 5-Ecke aus der Ebene in die Höhe klappt, so dass sich mit 12 Seitenflächen der Körper schließt.</p>
+        <p class="show-only cell120">Ein <a href="https://de.wikipedia.org/wiki/120-Zell" target="_blank">120-Zell</a> ist ein 4-dimensionaler Körper aus 120 Dodekaedern.<br/>Würfel kann man so stapeln, dass sie den ganzen Raum ohne Lücke einnehmen. Ähnlich wie bei 5-Ecken in der Ebene, die man nur durch Klappen in die 3. Dimension zusammenfügen kann, lassen sich Dodekaeder nicht ohne Lücken von 10,3° stapeln. Man muss sie in eine weitere – die 4. Dimension – klappen, um die Lücken zu schließen. Dieser 4-dimensionale Körper ist erst mit 120 Dodekaedern vollständig geschlossen.</p>
+        <p class="show-only sphere">In der Projektion wird eine Kugel meist mit dem Gradnetz aus Längen- und Breitenkreisen dargestellt. Statt den Längenkreisen werden hier die Breitenkreise zusätzlich zur z-Richtung auch in x- und y-Richtung gezeichnet. In gewisser Weise kann man die drei Großkreise als Kanten der Kugel sehen, wobei das mathematisch natürlich nicht genaz korrekt ist, da alle Richtungen gleichwertig sind.</p>
+        <p class="show-only sphere">Sowohl bei der Kugel als auch bei der Hypersphäre kann die Anzahl der Kreise eingestellt werden.</p>
+        <p class="show-only hypersphere">Eine Kugel kann man sich aus vielen übereinander geschichteten Kreisen vorstellen (klein bis groß und wieder klein). Eine <a href="https://de.wikipedia.org/wiki/3-Sph%C3%A4re" target="_blank">Hypersphäre oder 3-Sphäre</a> entsteht analog, wenn man viele Kugeln (klein bis groß und wieder klein) in der 4. Dimension übereinander stapeln würde.</p>
+      </div>
+    </div>
+    <div class="grid-col controls">
+      <h2><span lang="en-GB">Settings</span><span lang="de-DE">Einstellungen</span></h2>
+      <h3><span lang="en-GB">General</span><span lang="de-DE">Allgemein</span></h3>
+      <div>
+        <label><span lang="en-GB">Object</span><span lang="de-DE">Objekt</span></span>
+          <select name="object">
+            <option value="cube" lang="en-GB">Cube</option><option value="cube" lang="de-DE">Würfel</option>
+            <option value="tesseract" lang="en-GB">Tesseract (4D-cube)</option><option value="tesseract" lang="de-DE">Tesserakt (4D-Würfel)</option>
+            <option value="dodecahedron" lang="en-GB">Dodecahedron</option><option value="dodecahedron" lang="de-DE">Dodekaeder</option>
+            <option value="cell120" lang="en-GB">120-Cell (4D-dodecahedron)</option><option value="cell120" lang="de-DE">120-Zell (4D-Dodekaeder)</option>
+            <option value="sphere" lang="en-GB">Sphere</option><option value="sphere" lang="de-DE">Kugel</option>
+            <option value="hypersphere" lang="en-GB">Hypersphere (4D-sphere)</option><option value="hypersphere" lang="de-DE">Hypersphäre (4D-Kugel)</option>
+          </select>
+        </label>
+      </div>
+      <div>
+        <label><span lang="en-GB">Colour</span><span lang="de-DE">Farbe</span><input type="color" name="color" value="#643CC8"></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">Corner labels</span><span lang="de-DE">Labels der Ecken</span><input type="checkbox" name="pointLabels" value="1"></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">Coordinates</span><span lang="de-DE">Koordinaten</span><input type="checkbox" name="pointCoordinates" value="1"></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">Speed</span><span lang="de-DE">Geschwindigkeit</span><input type="range" name="speed" min="-4" max="4" step="0.1" value="0" autocomplete="off"></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">Zoom</span><span lang="de-DE">Zoom</span><input type="range" name="zoom" min="-2" max="2" step="0.1" value="0" autocomplete="off" data-decimals="1"><span></span></label>
+      </div>
+      <div class="show-only sphere hypersphere">
+        <label><span lang="en-GB">Density of the sphere</span><span lang="de-DE">Kugeldichte</span><input type="range" name="circ" min="1" max="15" step="1" value="8" autocomplete="off" data-decimals="0"><span></span></label>
+      </div>
+      
+      <h3><span lang="en-GB">Rotation</span><span lang="de-DE">Rotation</span></h3>
+      <div>
+        <label><span lang="en-GB">yz-plane (x-axis)</span><span lang="de-DE">yz-Ebene (x-Achse)</span><input type="range" name="rot[3]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="3" autocomplete="off"> auto</label>
+      </div>
+      <div>
+        <label><span lang="en-GB">zx-plane (y-axis)</span><span lang="de-DE">zx-Ebene (y-Achse)</span><input type="range" name="rot[1]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="1" autocomplete="off"> auto</label>
+      </div>
+      <div>
+        <label><span lang="en-GB">xy-plane (z-axis)</span><span lang="de-DE">xy-Ebene (z-Achse)</span><input type="range" name="rot[0]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="0" autocomplete="off"> auto</label>
+      </div>
+      <div>
+        <label><span lang="en-GB">xw-plane (4D)</span><span lang="de-DE">xw-Ebene (4D)</span><input type="range" name="rot[2]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="2" autocomplete="off"> auto</label>
+      </div>
+      <div>
+        <label><span lang="en-GB">yw-plane (4D)</span><span lang="de-DE">yw-Ebene (4D)</span><input type="range" name="rot[4]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="4" autocomplete="off"> auto</label>
+      </div>
+      <div>
+        <label><span lang="en-GB">zw-plane (4D)</span><span lang="de-DE">zw-Ebene (4D)</span><input type="range" name="rot[5]" min="-360" max="360" step="2" value="0" autocomplete="off"><span></span><span>°</span></label>
+        <label><input type="checkbox" name="rotAuto[]" value="5" autocomplete="off"> auto</label>
+      </div>
+      
+      <h3><span lang="en-GB">Translation</span><span lang="de-DE">Verschiebung</span></h3>
+      <div>
+        <label><span lang="en-GB">x-axis</span><span lang="de-DE">x-Achse</span><input type="range" name="trans[0]" min="-4" max="4" step="0.125" value="0" autocomplete="off" data-decimals="2"><span></span></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">y-axis</span><span lang="de-DE">y-Achse</span><input type="range" name="trans[1]" min="-4" max="4" step="0.125" value="0" autocomplete="off" data-decimals="2"><span></span></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">z-axis</span><span lang="de-DE">z-Achse</span><input type="range" name="trans[2]" min="-4" max="4" step="0.125" value="0" autocomplete="off" data-decimals="2"><span></span></label>
+      </div>
+      <div>
+        <label><span lang="en-GB">w-axis (4D)</span><span lang="de-DE">w-Achse (4D)</span><input type="range" name="trans[3]" min="-4" max="4" step="0.125" value="0" autocomplete="off" data-decimals="2"><span></span></label>
+      </div>
+      
+      <h3><span lang="en-GB">Reset</span><span lang="de-DE">Zurücksetzen</span></h3>
+      <div><button name="reset"><span lang="en-GB">Reset</span><span lang="de-DE">Reset</span></button></div>
+    </div>
+  </div>
+</div>
+
+<script>
+const canvas = document.getElementById('c'), ctx=canvas.getContext('2d');
+let W = canvas.getBoundingClientRect().width, H = canvas.getBoundingClientRect().height;
+canvas.width = W;
+canvas.height = H;
+
+ctx.font = "12px sans-serif";
+
+const axis = ['x','y','z','w'];
+const a = 1;
+let sc = 90*W/600;
+
+
+const e5 = () => [[1,0,0,0,0],[0,1,0,0,0],[0,0,1,0,0],[0,0,0,1,0],[0,0,0,0,1]];
+
+let rafId = null;
+let data = {
+  pointLabels: false,
+  pointCoordinates: false,
+  pointDisplay: [1,0],
+  color: '#643CC8',
+  rotTransState: e5(),
+  rotations: [0,0,0,0,0,0],
+  auto: [0,0,0,0,0,0],
+  shift: [0,0,0,0],
+  move: [],
+  scale: 1,
+  speed: 1,
+  circ: 8
+};
+
+const anglePoint = function (x,y) {
+  const phi = Math.atan2(x + y, x - y);
+  return phi < 0 ? phi + 2*Math.PI : phi;
+};
+
+const sortVerts = function(v1, v2) {
+  if (v1[3] < v2[3]) return -1;
+  if (v1[3] > v2[3]) return 1;
+  
+  if (v1[2] < v2[2]) return -1;
+  if (v1[2] > v2[2]) return 1;
+  
+  const a1 = anglePoint(v1[0], v1[1]);
+  const a2 = anglePoint(v2[0], v2[1]);
+  
+  if (a1 < a2) return -1;
+  if (a1 > a2) return 1;
+  
+  return 0;
+};
+
+const multisetPermutations = function* (
+  elements,
+  invert = false,
+  parity = 0,          // null | 'even' | 'odd'
+  signedParity = false    // true: Vorzeichen zählen zur Parität (Determinante)
+) {
+  const n = elements.length;
+  const vals = elements.map(e => (invert ? Math.abs(e) : e));
+
+  if (parity !== 0 && new Set(vals).size !== n) {
+    throw new Error(
+      'Parität ist nur bei paarweise verschiedenen Werten wohldefiniert: ' +
+      'bei Wiederholungen entsteht jede Anordnung sowohl gerade als auch ungerade.'
+    );
+  }
+
+  // Kandidaten (Quellindex + vorzeichenbehafteter Wert), global nach Wert sortiert
+  const candidates = [];
+  for (let idx = 0; idx < n; idx++) {
+    const v = vals[idx];
+    if (invert && v !== 0) candidates.push({ idx, val: -v }, { idx, val: v });
+    else candidates.push({ idx, val: v });
+  }
+  candidates.sort((a, b) => (a.val - b.val) || (a.idx - b.idx));
+
+  const used = new Array(n).fill(false);
+  const cur = [];
+
+  const rec = function* (sign) {
+    if (cur.length === n) {
+      if (parity === 0 || sign === parity) yield [...cur];
+      return;
+    }
+    let prev, havePrev = false;
+    for (const { idx, val } of candidates) {
+      if (used[idx]) continue;
+      if (havePrev && val === prev) continue;   // gleiche Werte nur einmal pro Ebene
+      prev = val; havePrev = true;
+
+      // Inversionen: noch freie Indizes kleiner als idx
+      let inv = 0;
+      for (let j = 0; j < idx; j++) if (!used[j]) inv++;
+      let s = (inv & 1) ? -sign : sign;
+      if (signedParity && val < 0) s = -s;
+
+      used[idx] = true;
+      cur.push(val);
+      yield* rec(s);
+      cur.pop();
+      used[idx] = false;
+    }
+  };
+
+  yield* rec(1);
+};
+
+const edgesByMinDistance = function(verts, tol = 0.05) {
+  const n = verts.length, dim = verts[0].length;
+  const d2 = (i, j) => {
+    let s = 0;
+    for (let k = 0; k < dim; k++) { const t = verts[i][k] - verts[j][k]; s += t*t; }
+    return s;
+  };
+
+  let min = Infinity;
+  for (let i = 0; i < n-1; i++)
+    for (let j = i+1; j < n; j++) {
+      const s = d2(i, j);
+      if (s > 1e-12 && s < min) min = s;
+    }
+
+  const lim = min * (1 + tol) ** 2, E = [];
+  for (let i = 0; i < n-1; i++)
+    for (let j = i+1; j < n; j++)
+      if (d2(i, j) <= lim) E.push([i, j]);
+  return E;
+};
+
+const matrixTrans = function(m) {
+  let result = [];
+  for (let i=0; i<m[0].length; i++) {
+    result[i] = [];
+    for (let j=0; j<m.length; j++) {
+      result[i][j] = m[j][i];
+    }
+  }
+  return result;
+};
+
+const matrixMultiply = function(m1, m2) {
+  let result = [];
+  for (let i=0; i<m1.length; i++) {
+    result[i] = [];
+    for (let j=0; j<m2[0].length; j++) {
+      let sum = 0;
+      for (let k=0; k<m1[0].length; k++) {
+        sum += m1[i][k] * m2[k][j];
+      }
+      result[i][j] = sum;
+    }
+  }
+  return result;  
+};
+
+let verts4D = [];
+let edges = [];
+let circles = [];
+
+const objects = {
+  cube: function(dim=3) {
+    data.pointDisplay = [1,0];
+    verts4D = [];
+    edges = [];
+    circles = [];
+    for(let i=0; i<(dim==4?16:8); i++){
+      verts4D.push([i&1?1:-1, i&2?1:-1, i&4?1:-1, dim==4?(i&8?1:-1):0]);
+    }
+    
+    verts4D.sort(sortVerts);
+    
+    for (let i=0; i<verts4D.length-1; i++) {
+      for (let j=i+1; j<verts4D.length; j++) {
+        let diff = 0;
+        for (let k=0; k<4; k++) {
+          if (verts4D[i][k] !== verts4D[j][k]) diff++;
+        }
+        if (diff === 1) edges.push([i,j]);
+      }
+    }
+  },
+  tesseract: function() {
+    objects.cube(4)
+  },
+  dodecahedron: function() {
+    data.pointDisplay = [1,0];
+    verts4D = [];
+    edges = [];
+    circles = [];
+    const fi = (1+Math.sqrt(5))/2;
+    const R1 = fi/(Math.sqrt(fi+2)), R2 = fi*R1;
+    const H1 = Math.sqrt(250+110*Math.sqrt(5))/20, H2 = H1/fi**3;
+    for (let k = 0; k < 5; k++) {
+      const aU = degToRad(72*k);
+      const aL = degToRad(72*k-36);
+      verts4D.push([R1*Math.cos(aU), R1*Math.sin(aU),  H1, 0]);
+      verts4D.push([R2*Math.cos(aU), R2*Math.sin(aU),  H2, 0]);
+      verts4D.push([R2*Math.cos(aL), R2*Math.sin(aL), -H2, 0]);
+      verts4D.push([R1*Math.cos(aL), R1*Math.sin(aL), -H1, 0]);
+    }
+
+/*    for (let k = 0; k < 5; k++) {
+      edges.push([k*4,(k+1)%5*4]);
+      edges.push([k*4,k*4+1]);
+      edges.push([k*4+1,k*4+2]);
+      edges.push([k*4+1,(k+1)%5*4+2]);
+      edges.push([k*4+3,k*4+2]);
+      edges.push([k*4+3,(k+1)%5*4+3]);
+    }*/
+    
+    verts4D.sort(sortVerts);
+    
+    edges = edgesByMinDistance(verts4D);
+  },
+  cell120: function() {
+    data.pointDisplay = [1,0];
+    verts4D = [];
+    edges = [];
+    circles = [];
+    const s = 1/Math.sqrt(2);
+    const fi = (1+Math.sqrt(5))/2;
+    for (const p of multisetPermutations([2*s,2*s,0,0], true)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*Math.sqrt(5),s,s,s], true)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*fi,s*fi,s*fi,s/fi**2], true)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*fi**2,s/fi,s/fi,s/fi], true)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*fi**2,s/fi**2,s,0], true, 1)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*Math.sqrt(5),s/fi,s*fi,0], true, 1)) {
+      verts4D.push(p);
+    }
+    for (const p of multisetPermutations([s*2,s,s*fi,s/fi], true, 1)) {
+      verts4D.push(p);
+    }
+    
+    verts4D.sort(sortVerts);
+    
+    edges = edgesByMinDistance(verts4D);
+  },
+  sphere: function(dim=3) {
+    data.pointDisplay = [3,1,2];
+    verts4D = [];
+    edges = [];
+    circles = [];
+    
+    const circ = data.circ;
+    
+    for (let i=0; i<dim; i++) {
+      for (let j=0; j<circ; j++) {
+        const a = (2*j+1)/circ-1;
+        const b = Math.sqrt(1-a**2);
+        verts4D.push([i%dim==0?a:0, i%dim==1?a:0, i%dim==2?a:0, i%dim==3?a:0]);
+        verts4D.push([i%dim==0?a:((i+1)%dim==0?b:0), i%dim==1?a:((i+1)%dim==1?b:0), i%dim==2?a:((i+1)%dim==2?b:0), i%dim==3?a:((i+1)%dim==3?b:0)]);
+        verts4D.push([i%dim==0?a:((i+2)%dim==0?-b:0), i%dim==1?a:((i+2)%dim==1?-b:0), i%dim==2?a:((i+2)%dim==2?-b:0), i%dim==3?a:((i+2)%dim==3?-b:0)]);
+        circles.push([3*(circ*i+j), 3*(circ*i+j)+1, 3*(circ*i+j)+2]);
+      }
+    }
+  },
+  hypersphere: function() {
+    objects.sphere(4);
+  }
+};
+
+
+const rotation = [];
+for (let i=0; i<4; i++) {
+  for (let j=i+1; j<4; j++) {
+    rotation.push(
+      function(v,a,t=false) {
+        const c=Math.cos(a),s=Math.sin(a);
+        let r = [...v];
+        r[i] = v[i]*c + (((j-i)%2)*2-1)*v[j]*s;
+        r[j] = v[j]*c - (((j-i)%2)*2-1)*v[i]*s;
+        
+        return r;
+      }
+    );
+  }
+}
+
+const matrix = [];
+for (let i=0; i<4; i++) {
+  for (let j=i+1; j<4; j++) {
+    matrix.push(
+      function(a) {
+        const c=Math.cos(a),s=Math.sin(a);
+        let rot = e5();
+        rot[i][i] = c;
+        rot[j][j] = c;
+        rot[i][j] = (((j-i)%2)*2-1)*s;
+        rot[j][i] = -(((j-i)%2)*2-1)*s;
+        
+        data.rotTransState = matrixMultiply(rot, data.rotTransState);
+      }
+    );
+  }
+}
+
+function project(v, s=[1,1]) {
+//  return [(v[1]-0.5*v[0])*s[0], (v[2]-0.5*v[0])*s[1]];
+  return [(-0.3716*v[0]+0.9925*v[1])*s[0], (-0.3346*v[0]-0.1219*v[1]+v[2])*s[1]];
+}
+
+function pLength(p1, p2) {
+  return Math.sqrt((p1[0]-p2[0])**2+(p1[1]-p2[1])**2);
+}
+
+const vAdd = (a, b) => a.map((v, i) => v + b[i]);
+
+function degToRad(deg) {
+  return deg * Math.PI / 180;
+}
+
+function opToHex(op) {
+  return Math.round(op*255).toString(16).padStart(2,'0');
+}
+
+function getPoint(i) {
+  return (i >= 26 ? getPoint(((i / 26) >> 0) - 1) : '') + 'ABCDEFGHIJKLMNOPQRSTUVWXYZ'[i % 26 >> 0];
+}
+
+/*function growingDash(totalLength, dash = 6, gapMin = 0, gapMax = 2) {
+  if ((gapMax-gapMin)/2+gapMin == 0) return [totalLength,0];
+  const pattern = [];
+  let gap = gapMin;
+  const gapAdd = (gapMax == gapMin) ? 0 : (totalLength / ((gapMax-gapMin)/2+gapMin) - dash) / totalLength;
+  for (let len = 0; len < totalLength && gap >= 0; gap += gapAdd) {
+    pattern.push(dash, gap);
+    len += dash + gap;
+  }
+  
+  return pattern;
+}*/
+/*function growingDash(totalLength, dash = 6, gapMin = -4, gapMax = 2) {
+  if (totalLength <= 0) return [];
+
+  const avgGap = (gapMin + gapMax) / 2;
+  const step = dash + avgGap;
+  if (step <= 0) return [];
+
+  const n = Math.max(1, Math.round(totalLength / step));
+  const slope = n > 1 ? (gapMax - gapMin) / (n - 1) : 0;
+
+  const pattern = [];
+  let solid = 0;
+
+  for (let i = 0; i < n; i++) {
+    const gap = gapMin + slope * i;
+    if (gap <= 0) {
+      solid += Math.max(0, dash + gap);
+    } else {
+      pattern.push(solid + dash, gap);
+      solid = 0;
+    }
+  }
+  if (solid > 0) pattern.push(solid, 0);
+
+  return pattern;
+}*/
+function depthDash(totalLength, opts = {}) {
+  const {
+    dash = 6, dot = 0.1,
+    gapMin = -4, gapMax = 2,
+    sgapMin = -2, sgapMax = 1
+  } = opts;
+
+  const negX = gapMin > 0 || gapMax > 0;
+  const negW = sgapMin > 0 || sgapMax > 0;
+  
+  if (totalLength <= 0 || (!negX && !negW)) return [];
+
+  const pattern = [];
+  let solid = 0, t = 0, guard = 0;
+
+  const emit = (mark, gap) => {
+    const g = gap > 0 ? gap : 0;
+    if (g === 0) solid += mark;
+    else { pattern.push(solid + mark, g); solid = 0; }
+    t += mark + g;
+  };
+
+  while (t < totalLength && ++guard < 20000) {
+    const f = t / totalLength;
+    if (negX) emit(dash, gapMin  + (gapMax  - gapMin ) * f);
+    if (negW) emit(dot,  sgapMin + (sgapMax - sgapMin) * f);
+  }
+
+  if (solid > 0) pattern.push(solid, 0);
+  if (pattern.length % 2) pattern.push(0);
+  return pattern;
+}
+
+function wOpacity(v1, v2) {
+  return [1-Math.min(1,Math.abs(v1[3])), 1-Math.min(1,Math.abs(v2[3])), v1[3]*v2[3] < 0 ? Math.abs(v1[3]/(v1[3]-v2[3])) : 0];
+}
+
+
+function drawCircle4D(c, scale) {
+  const v0 = verts4D[c[0]], v1 = verts4D[c[1]], v2 = verts4D[c[2]];
+  const r1 = v1.map((x,k) => x - v0[k]);
+  const r2 = v2.map((x,k) => x - v0[k]);
+  const S = [scale,-scale];
+
+  const p0 = project(v0,S);
+  const d1 = pLength(project(v1,S), p0), d2 = pLength(project(v2,S), p0);
+  const perim = Math.PI * Math.sqrt(2*(d1*d1 + d2*d2));   // Apollonius
+  const steps = Math.max(16, Math.min(120, Math.round(perim/12)));
+
+  ctx.lineCap = 'round';
+  ctx.lineWidth = 2;
+
+  let prev4 = null, prevP = null, offset = 0;
+  for (let i = 0; i <= steps; i++) {
+    const t = 2*Math.PI*i/steps, ct = Math.cos(t), st = Math.sin(t);
+    const cur4 = v0.map((x,k) => x + ct*r1[k] + st*r2[k]);
+    const curP = project(cur4, S);
+
+    if (prev4) {
+      const len = pLength(prevP, curP);
+      const wop = wOpacity(prev4, cur4);
+
+      let grad;
+      if (len < 0.5 || (!wop[2] && Math.abs(wop[0]-wop[1]) < 0.01)) {
+        grad = data.color + opToHex(wop[2] ? 1 : Math.max(wop[0], wop[1]));
+      } else {
+        grad = ctx.createLinearGradient(prevP[0], prevP[1], curP[0], curP[1]);
+        grad.addColorStop(0, data.color + opToHex(wop[0]));
+        if (wop[2]) grad.addColorStop(wop[2], data.color);
+        grad.addColorStop(1, data.color + opToHex(wop[1]));
+      }
+
+      ctx.setLineDash(depthDash(len, { dash: 6, dot: 0.1,
+        gapMin:  -prev4[0]*4, gapMax:  -cur4[0]*4,
+        sgapMin: -prev4[3]*8, sgapMax: -cur4[3]*8 }));
+      ctx.lineDashOffset = -offset;
+      ctx.strokeStyle = grad;
+      ctx.beginPath();
+      ctx.moveTo(prevP[0], prevP[1]);
+      ctx.lineTo(curP[0], curP[1]);
+      ctx.stroke();
+      offset += len;
+    }
+    prev4 = cur4; prevP = curP;
+  }
+  ctx.lineDashOffset = 0;
+}
+
+
+function draw() {
+  ctx.clearRect(0,0,W,H);
+  ctx.fillStyle='#fafaf8';
+  ctx.fillRect(0,0,W,H);
+  ctx.save();
+  ctx.translate(W/2,H/2);
+  
+  data.move.forEach(function(val) {
+    if (val[0] == 'zoom') {
+      data.scale = 2**val[1];
+    }
+    if (val[0] == 'speed') {
+      data.speed = 2**val[1];
+    }
+  });
+  
+  let scale = data.scale*sc;
+  
+  ctx.strokeStyle = '#aaa';
+  ctx.fillStyle = '#aaa';
+  ctx.lineWidth = 1;
+  ctx.beginPath();
+  ctx.moveTo(0,0);
+  ctx.lineTo(...project([3,0,0,0], [scale,-scale]));
+  ctx.fillText(axis[0], ...project(vAdd([3,0,0,0],[0.3/data.scale,0,0,0]), [scale,-scale]));
+  ctx.moveTo(0,0);
+  ctx.lineTo(...project([0,3,0,0], [scale,-scale]));
+  ctx.fillText(axis[1], ...project(vAdd([0,3,0,0],[0,0.05/data.scale,-0.04/data.scale,0]), [scale,-scale]));
+  ctx.moveTo(0,0);
+  ctx.lineTo(...project([0,0,3,0], [scale,-scale]));
+  ctx.fillText(axis[2], ...project(vAdd([0,0,3,0],[0,-0.03/data.scale,0.05/data.scale,0]), [scale,-scale]));
+  ctx.fillText(axis[3], ...project([0,0.025,-0.15,0], [sc,-sc]));
+  ctx.stroke();
+
+  for (let i=0; i<6; i++) {
+    let move = false;
+    
+    data.move.forEach(function(val) {
+      if (i==0 && val[0] == 'rotate') {
+        verts4D = verts4D.map(v => {return matrixTrans(matrixMultiply(val[1],matrixTrans([[...v, 1]])))[0].slice(0, 4);});
+      }
+      if (val[0] == 'rot['+i+']') {
+        const rot = val[1];
+        verts4D = verts4D.map(v => rotation[i](v,degToRad(rot-data.rotations[i])));
+        matrix[i](degToRad(rot-data.rotations[i]));
+        data.rotations[i] = rot;
+        move = true;
+      }
+      if (val[0] == 'trans['+i+']') {
+        const trans = val[1];
+        verts4D = verts4D.map(v => {v[i] += trans-data.shift[i];return v;});
+        data.rotTransState[i][4] += trans-data.shift[i];
+        data.shift[i] = trans;
+        move = true;
+      }
+    });
+    
+    if (!move && data.auto[i]) {
+      const auto = data.speed;//1/data.auto.reduce((a, c) => a + c, 0);
+      verts4D = verts4D.map(v => rotation[i](v,degToRad(a*auto)));
+      matrix[i](degToRad(a*auto));
+      rot = data.rotations[i] + a*auto;
+      if (rot > 360) rot = rot - 720;
+      data.rotations[i] = rot;
+      setRangeValue(document.querySelector('input[type="range"][name="rot['+i+']"]'), rot);
+    }
+  }
+  data.move = [];
+  
+  if (data.pointLabels || data.pointCoordinates) {
+    for (let i=0; i<verts4D.length; i++) {
+      if (data.pointDisplay.indexOf(i % data.pointDisplay[0], 1) <= 0) continue;
+      const v = verts4D[i];
+      if (v[3] > -1 && v[3] < 1) {
+        ctx.fillStyle = '#aaaaaa'+opToHex(1-Math.abs(v[3]*0.75));
+        ctx.fillText((data.pointLabels?getPoint(Math.floor(i/data.pointDisplay[0]))+' ':'')+(data.pointCoordinates?('('+v[0].toFixed(2)+'/'+v[1].toFixed(2)+'/'+v[2].toFixed(2)+'/'+v[3].toFixed(2)+')'):''), ...project(vAdd(v, [0,0.025/data.scale,-0.15/data.scale,0]), [scale,-scale]));
+      }
+    }
+  }
+  
+  for (const c of circles) {
+/*    const v0 = verts4D[c[0]], v1 = verts4D[c[1]], v2 = verts4D[c[2]];
+    
+    let p0 = project(v0,[scale,-scale]), p1 = project(v1,[scale,-scale]), p2 = project(v2,[scale,-scale]);
+ 
+    ctx.save();
+    ctx.transform(p1[0]-p0[0], p1[1]-p0[1], p2[0]-p0[0], p2[1]-p0[1], p0[0], p0[1]);
+    ctx.beginPath();
+    ctx.arc(0, 0, 1, 0, 2 * Math.PI);
+    ctx.restore();
+    ctx.setLineDash(depthDash(pLength(p1,p2), {dash: 6, dot: 0.1, gapMin: -v1[0]*4, gapMax: -v2[0]*4, sgapMin: -v1[3]*8, sgapMax: -v2[3]*8}));
+    ctx.strokeStyle = data.color;
+    ctx.lineWidth = 2;
+    ctx.stroke();
+*/
+    drawCircle4D(c, scale);
+  }
+  
+  
+  for (const e of edges) {
+    const v1 = verts4D[e[0]], v2 = verts4D[e[1]];
+    
+    let p1 = project(v1,[scale,-scale]), p2 = project(v2,[scale,-scale]);
+    
+    const wop = wOpacity(v1, v2);
+    
+    let grad;
+    
+    if (pLength(p1,p2) < 0.5) {
+      grad = data.color+opToHex(wop[2]?1:Math.max(wop[0],wop[1]));
+    }
+    else {
+      grad = ctx.createLinearGradient(p1[0], p1[1], p2[0], p2[1]);
+      grad.addColorStop(0, data.color+opToHex(wop[0]));
+      if (wop[2]) grad.addColorStop(wop[2], data.color);
+      grad.addColorStop(1, data.color+opToHex(wop[1]));
+    }
+    
+    ctx.setLineDash(depthDash(pLength(p1,p2), {dash: 6, dot: 0.1, gapMin: -v1[0]*4, gapMax: -v2[0]*4, sgapMin: -v1[3]*8, sgapMax: -v2[3]*8}));
+    ctx.strokeStyle = grad;
+    ctx.lineCap = 'round';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(p1[0],p1[1]);
+    ctx.lineTo(p2[0],p2[1]);
+    ctx.stroke();
+  }
+
+  ctx.restore();
+  
+  if (document.querySelector('input[type="checkbox"][name*="rotAuto"]:checked')) {
+    rafId = requestAnimationFrame(draw);
+  }
+  else {
+    rafId = null;
+  }
+  
+  return;
+
+
+}
+
+
+
+function setObjectClass() {
+  document.querySelectorAll('select[name="object"] option').forEach((element) => {
+    document.body.classList.remove(element.getAttribute('value'));
+  });
+  document.body.classList.add(document.querySelector('select[name="object"]').value || 'cube');
+}
+
+objects[document.querySelector('select[name="object"]').value || 'cube']();
+setObjectClass();
+data.pointLabels = document.querySelector('input[name="pointLabels"]').checked;
+data.pointCoordinates = document.querySelector('input[name="pointCoordinates"]').checked;
+data.color = document.querySelector('input[name="color"]').value;
+
+draw();
+
+function setRangeValue(element, value, decimals=0) {
+  element.value = value;
+  if (element.nextSibling) element.nextSibling.innerHTML = parseFloat(value) ? parseFloat(value).toFixed(decimals||0) : '';
+}
+
+
+document.querySelector('select[name="object"]').addEventListener('change', (element) => {
+  if (rafId !== null) cancelAnimationFrame(rafId);
+  
+  objects[element.target.value]();
+  data.move.push(['rotate', data.rotTransState]);
+  
+  setObjectClass();
+  
+  draw();
+});
+
+document.querySelectorAll('input[type="range"]').forEach((element) => {
+  element.addEventListener('input', () => {
+    if (element.nextSibling) element.nextSibling.innerHTML = parseFloat(element.value) ? parseFloat(element.value).toFixed(element.dataset.decimals||0) : '';
+    data.move.push([element.name, parseFloat(element.value)]);
+    if (rafId === null) draw();
+  });
+});
+
+document.querySelectorAll('input[type="checkbox"][name*="rotAuto"]').forEach((element) => {
+  element.addEventListener('input', () => {
+    data.auto[element.value] = element.checked ? 1 : 0;
+    if (rafId === null) draw();
+  });
+});
+
+document.querySelector('button[name="reset"]').addEventListener('click', (element) => {
+  document.querySelectorAll('input[type="range"]').forEach((element) => {
+    setRangeValue(element, element.attributes.value||0, element.dataset.decimals);
+  });
+  document.querySelectorAll('input[type="checkbox"][name*="rotAuto"]').forEach((element) => {
+    element.checked = false;
+  });
+  
+  data.rotTransState = e5();
+  data.rotations.forEach(function(val, key) {this[key] = 0;}, data.rotations);
+  data.auto.forEach(function(val, key) {this[key] = 0;}, data.auto);
+  data.shift.forEach(function(val, key) {this[key] = 0;}, data.shift);
+  data.move = [];
+  data.scale = 1;
+  data.speed = 1;
+  data.circ = 8;
+  
+  objects[document.querySelector('select[name="object"]').value || 'cube']();
+
+  if (rafId === null) draw();
+});
+
+document.querySelector('input[name="color"]').addEventListener('input', (e) => {
+  data.color = e.target.value;
+  if (rafId === null) draw();
+});
+
+document.querySelector('input[name="pointLabels"]').addEventListener('input', (e) => {
+  data.pointLabels = e.target.checked;
+  if (rafId === null) draw();
+});
+
+document.querySelector('input[name="pointCoordinates"]').addEventListener('input', (e) => {
+  data.pointCoordinates = e.target.checked;
+  if (rafId === null) draw();
+});
+
+document.querySelector('input[name="circ"]').addEventListener('input', (e) => {
+  data.circ = e.target.value;
+  document.querySelector('select[name="object"]').dispatchEvent(new Event('change'));
+});
+
+window.addEventListener('resize', (event) => {
+  W = canvas.getBoundingClientRect().width; H = canvas.getBoundingClientRect().height;
+  canvas.width = W;
+  canvas.height = H;
+  sc = 90*W/600;
+  if (rafId === null) draw();
+});
+</script>
+</body>
+</html>
